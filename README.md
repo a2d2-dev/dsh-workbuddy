@@ -1,8 +1,30 @@
 # DSH WorkBuddy
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 Independent WorkBuddy account plugin for DeepSeek Harness. Adds Settings → WorkBuddy for browser sign-in, account status, credit balances and package expiry, and a searchable model catalog with free-model filtering, credit multipliers, promotions, and capabilities. The model selector exposes the account's chat models under the WorkBuddy provider, distinguishes duplicate names by ID, and labels explicitly free models. This package is independent of the A2D2 orchestration and DimAgent plugins.
 
 The host plugin delegates model requests to DSH's existing `PiAiAdapter`. The separately supervised Python service imports the maintained [workbuddy2api](https://github.com/Zhengyuuuui/workbuddy2api) implementation for streaming and tool-call protocol conversion. Tokens stay on the service host; the browser receives only an authorization link and account status. No WorkBuddy desktop process is required after browser authorization.
+
+## Screenshots
+
+Captured from the plugin's Chinese interface. Account identity, balances, and package expiry dates are redacted. Model availability, multipliers, and promotions reflect the capture date and may change.
+
+### Account and Credits
+
+![WorkBuddy settings with account status and redacted credit packages](docs/screenshots/settings-overview.png)
+
+### Model Search
+
+Duplicate display names retain their distinct model IDs and billing information.
+
+![DeepSeek search results showing distinct model IDs and billing](docs/screenshots/deepseek-models.png)
+
+### Free Models
+
+Free labels come from explicit upstream billing data and active promotions.
+
+![Free-only filter showing three models](docs/screenshots/free-models.png)
 
 ## Install
 
