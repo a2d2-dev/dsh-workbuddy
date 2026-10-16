@@ -1,0 +1,16 @@
+node_modules/
+lib/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.env
+.env.*
+session.json
+gateway.env
+gateway-key
+*.pem
+*.key
+*.log
+*.jsonl
+.DS_Store
