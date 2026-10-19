@@ -10,18 +10,18 @@ The host plugin delegates model requests to DSH's existing `PiAiAdapter`. The se
 
 Early-stage, self-hosted integration for existing DSH users. Each Python service owns one WorkBuddy account; authenticated users of the same DSH instance share that account and its credits. Use separate deployments for separate trust boundaries. This project does not provide a hosted service or tenant isolation.
 
-The settings interface has English and Chinese dictionaries, but model descriptions, promotion text, and the model selector's free label still have Chinese-only behavior. Current screenshots show Chinese. A full English walkthrough remains a release task.
+The settings interface supports English and Simplified Chinese, including model descriptions and promotion text when supplied by upstream. Provider model names use an English free label.
 
-Model availability and credits follow your upstream account. The provider's numeric cost metadata is currently zero for all models; this is not a statement that all models are free. Use the explicit free labels and live credit information in Settings. This is an independent community integration, with no affiliation or endorsement claimed from WorkBuddy or DeepSeek.
+Model availability, credit multipliers and time-limited free promotions follow your upstream account. Check the live credit information in Settings. This is an independent community integration, with no affiliation or endorsement claimed from WorkBuddy or DeepSeek.
 
-Start with a source checkout and the [deployment guide](deploy/README.md). A package archive has been tested locally, but its contents still need cleanup before registry distribution. See the [launch readiness checklist](docs/LAUNCH_READINESS.md) for the remaining work.
+Start with a source checkout and the [deployment guide](deploy/README.md), which includes an authenticated Caddy gateway configuration.
 
 ## Community and Operations
 
 - [Contributing and local verification](CONTRIBUTING.md)
 - [Security, credentials, and data handling](SECURITY.md)
 - [Support and bug reports](SUPPORT.md)
-- [Operator handover and release acceptance](docs/OPERATIONS.md)
+- [Service operation and recovery](docs/OPERATIONS.md)
 
 ## Screenshots
 
@@ -45,7 +45,7 @@ Free labels come from explicit upstream billing data and active promotions.
 
 ## Install
 
-Requires Node.js `^22.19.0 || >=24.0.0` and a compatible DSH installation. The local review used DSH packages `0.2.0-rc.2`; the wider peer-dependency range is not a tested compatibility matrix. Build with `pnpm install --frozen-lockfile && pnpm build`, then install the bundle using `dsh plugin --profile web add /absolute/path/to/dsh-workbuddy`. Configure the entry in the profile's `cordis.patch.yml`:
+Requires Node.js `^22.19.0 || >=24.0.0`, pnpm, and DSH packages `0.2.0-rc.2`. Build with `pnpm install --frozen-lockfile && pnpm build`, then install the bundle using `dsh plugin --profile web add /absolute/path/to/dsh-workbuddy`. Configure the entry in the profile's `cordis.patch.yml`:
 
 ```yaml
 - id: workbuddy
@@ -61,7 +61,7 @@ The key file contains the gateway's bearer credential, with no environment-varia
 
 ## Service
 
-Validated upstream revision: `1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc`. Install its dependencies with `uv sync` and run its virtual environment's `uvicorn --app-dir /absolute/path/to/dsh-workbuddy/server workbuddy_service:create_app --factory --host 127.0.0.1 --port 18788`. Set the following environment variables through the service supervisor:
+Requires Python 3.10+ and uv. Check out [workbuddy2api](https://github.com/Zhengyuuuui/workbuddy2api) at revision `1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc`. In this plugin directory, install the locked service dependencies with `uv sync --frozen --no-dev`, then run `.venv/bin/uvicorn --app-dir server workbuddy_service:create_app --factory --host 127.0.0.1 --port 18788`. Set the following environment variables through the service supervisor:
 
 | Variable | Purpose |
 | --- | --- |
@@ -75,7 +75,7 @@ Use Supervisor or another persistent service manager, with a single service work
 
 ## Verify
 
-Run `pnpm test`, `pnpm typecheck`, and `pnpm build`. For service tests use the upstream virtual environment with `PYTHONPATH=/path/to/upstream/server:/path/to/dsh-workbuddy/server pytest server/test_session.py server/test_pricing.py`. Real acceptance additionally requires DSH settings rendering, an authorized account, streamed text, and a tool-call round trip. Upstream currently has one stale client-header assertion; this package does not alter or suppress it.
+Run `pnpm test`, `pnpm typecheck`, and `pnpm check:package` (builds and verifies the distributable). For service tests run `uv sync --frozen`, then `PYTHONPATH=/absolute/path/to/workbuddy2api/server uv run --frozen pytest`. Install Caddy to include the real gateway integration tests. CI covers Node.js 22/24 and Python 3.10/3.14. Live acceptance additionally requires DSH settings rendering, an authorized account, streamed text, and a tool-call round trip.
 
 ## Remove
 

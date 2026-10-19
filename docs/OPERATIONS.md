@@ -1,62 +1,33 @@
-# Operator Handover
+# Service Operations
 
-This runbook prepares a future handover to DOT. It describes responsibilities and evidence to collect; it does not imply that DOT has accepted ownership or received credentials. The current supported operating model is one self-hosted account per Python service.
+Each Python service owns one WorkBuddy account shared by its DSH instance. Operate separate deployments for separate accounts or trust boundaries. Follow the [deployment guide](../deploy/README.md) for the locked service environment, gateway and Supervisor configuration.
 
-## Ownership Before Handover
+## Updates
 
-Record the following in the operator's private system, with named owners and backups. No production credentials or private host inventory belong in this repository.
+Record the working plugin commit, DSH version, upstream revision and service/gateway configuration before updating. Back up only the relevant profile overlay and deployment configuration; keep credentials and any credential backups in the deployment secret store.
 
-| Responsibility | Required handover record |
-| --- | --- |
-| Repository and releases | Maintainer, reviewer, GitHub access through normal organization controls, last accepted commit |
-| Runtime | DSH/profile owner, service host owner, supervisor, gateway, DNS/TLS owner |
-| Secrets and upstream account | Account owner, approved secret store, rotation/revocation procedure; transfer by secret reference |
-| User support | Issue triage owner, engineering escalation contact, supported languages and actual support hours |
-| Incidents | Incident lead, backup contact, alert destination and recovery authority |
-| External communications | Person approving compatibility, pricing, privacy and availability claims |
+Run the TypeScript tests, typecheck and package verification, then the Python tests against the pinned upstream revision. Deploy through the normal service manager, restart affected services and reload existing DSH tabs. Do not hand-edit generated bundles, package links or lockfiles.
 
-## Deployment Inventory
+## Acceptance
 
-Record the plugin commit, DSH/package versions, Node.js/pnpm versions, Python version and resolved Python dependencies, pinned workbuddy2api revision, gateway configuration revision, and physical profile home. The current validated upstream source revision is `1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc`.
+1. Verify that missing and incorrect gateway keys are rejected, including on health, account and inference routes. Verify that the Python listener is accessible only on loopback.
+2. Complete browser authorization, inspect account/model/credit information, search models and check the free-only filter. Test both supported interface languages and a narrow settings pane.
+3. Run a streamed text request, then a tool-call and tool-result round trip in a test DSH conversation.
+4. Check sign-out, expired authorization, unavailable credits, a service restart and upstream errors. An unavailable credit balance must not be treated as zero.
 
-Use the [deployment guide](../deploy/README.md) and supervisor example. The repository does not yet provide a complete authenticated gateway configuration. Provision that configuration through the deployment system and verify it before use. Keep a single Python worker per account, and require HTTPS between hosts. Use independent instances for separate accounts or trust boundaries.
+`deploy/verify_gateway.py --base-url URL --key-file PATH --model ID` exercises a live gateway. Use an authorized test account and an available model; the probe may consume credits. Its output includes the account identity, so sanitize it before sharing. This probe complements acceptance inside DSH.
 
-Back up the relevant profile overlay, supervisor/gateway configuration and last working source/artifact before updating. Store any credential backup privately and record its retention separately. A backup is not a substitute for a tested recovery procedure.
+## Monitoring and Logs
 
-## Release Acceptance
+Monitor service restarts, gateway errors, authorization failures, timeouts, upstream rate limits, disk usage and credit availability. `/health` reports a process/auth snapshot; use authenticated status/catalog checks and a controlled inference probe to establish readiness.
 
-- [ ] A clean checkout installs using the committed pnpm lockfile; TypeScript tests, typecheck and build pass.
-- [ ] Python session/pricing tests pass against the documented upstream revision; resolved Python versions are recorded.
-- [ ] The package contents are reviewed. No `__pycache__`, `.pyc`, credentials or private paths are shipped; referenced screenshots and deployment instructions are accessible.
-- [ ] English desktop and narrow-screen settings are exercised with a test account, including account state, balances, search, free filtering and recovery messages. Model descriptions, promotions and selector labels are reviewed in English too.
-- [ ] Missing and incorrect gateway keys are rejected on every exposed route, and the loopback Python listener cannot be reached externally. Verify the gateway removes its bearer key before forwarding.
-- [ ] Sign-in completes; an expired login can restart; another browser cannot finish the owner's pending login; sign-out clears authorization and model discovery.
-- [ ] A streamed text response succeeds, followed by a complete tool-call and tool-result round trip in DSH.
-- [ ] Request cancellation, upstream timeout/rate limit, unavailable credits, service restart and upstream authorization failure have documented recovery behavior.
-- [ ] Logs contain useful failure metadata without credentials or conversation content. Protocol JSONL rotation and disk usage are checked.
-- [ ] A rollback to the previously accepted commit/configuration succeeds in a test deployment.
-- [ ] The release record includes operator/reviewer, exact versions, date, region, completed checks and remaining limitations.
+Keep verbose LLM logging disabled. Configure retention and rotation for the protocol JSONL file separately from Supervisor output and the upstream rotating log. Review gateway access logs and backups too. Keep Authorization headers, cookies, authorization URLs, prompts and tool results out of routine diagnostics. See [SECURITY.md](../SECURITY.md) for data flow and credential deletion behavior.
 
-`deploy/verify_gateway.py` can exercise a live gateway with `--base-url`, `--key-file`, and `--model`. Use an authorized test account and a model available to it. It makes inference requests that may consume credits, and its output includes the account identity; sanitize output before sharing. This gateway probe complements acceptance inside DSH.
+## Recovery
 
-## Routine Operation
+1. Record safe diagnostics and the affected release. Check gateway access, then Python status, upstream authorization/catalog and a controlled inference request.
+2. Restore the previously accepted source or artifact and rebuild if needed. Restore only relevant deployment/profile configuration, preserving unrelated later edits.
+3. Restart the affected services, reload DSH, and repeat gateway rejection, account discovery and streamed tool-call checks.
+4. Investigate the root cause using sanitized diagnostics from [SUPPORT.md](../SUPPORT.md). Reconnect through account authorization if needed; do not automatically restore stale session files.
 
-Check service restarts, gateway errors, authentication failures, request timeouts, upstream 429/5xx responses, disk usage and credit availability. `/health` from the mounted upstream application is a process/auth snapshot, not proof that a model request will complete. Use authenticated status/catalog checks and a controlled inference probe to establish readiness. Monitoring frequency and alert thresholds must be chosen for the actual deployment.
-
-Keep verbose LLM logging disabled. Review retention for the protocol JSONL file, upstream rotating log, supervisor output, gateway access logs and backups. Do not promise customers data retention or deletion behavior until the operator has implemented and verified it across all these locations.
-
-For support, collect only the versions, failure time, HTTP status and sanitized metadata described in [SUPPORT.md](../SUPPORT.md). DOT can triage reports and reproduce documented paths; maintainers should investigate code, protocol and security failures. Agree actual escalation contacts and response targets before announcing support coverage.
-
-## Recovery and Rollback
-
-1. Record the affected release, failure time and safe diagnostics. Check gateway access first, then Python status, upstream authorization/catalog, and finally a controlled model request.
-2. Stop the rollout if acceptance fails. Restore the previously accepted source or artifact through the normal deployment system; rebuild source if needed. Never patch generated bundles, package links or lockfiles by hand.
-3. Restore only the relevant supervisor/gateway/profile settings from the recorded revision, preserving later unrelated profile changes. Restart the affected services and reload the browser.
-4. Repeat gateway rejection checks, account/catalog verification and a streamed tool round trip. Record the recovery result and open a sanitized engineering issue for the root cause.
-5. If authorization is compromised, follow [SECURITY.md](../SECURITY.md). Restoring application code does not rotate or revoke credentials. Avoid restoring stale session files automatically; reconnect using the account owner's authorization when necessary.
-
-## Overseas Launch Gate
-
-Before public promotion, close the priorities in the [launch readiness checklist](LAUNCH_READINESS.md). The initial audience is developers already using DSH and WorkBuddy who can operate their own service. A managed multi-user offering requires separate account isolation, user-specific access controls, abuse controls, data handling and billing design, followed by its own acceptance review.
-
-The initial message should describe the actual benefit: connect a WorkBuddy account to DSH, inspect live credits and models, and run streaming/tool workflows. Avoid promises of permanently free models, universal geographic availability, official endorsement, tenant isolation, or a support SLA that has not been established.
+If a credential is compromised, stop access, rotate the gateway key and revoke affected authorization using upstream account controls. Rolling back application code does not revoke credentials.

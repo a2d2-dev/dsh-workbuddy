@@ -2,6 +2,7 @@
 export interface ModelDetail {
   id: string; name: string; contextWindow: number; maxTokens: number; vision: boolean; reasoning: boolean
   description: string; billingLabel: string; free: boolean; promotionEndsAt: string; promotionText: string
+  descriptionZh?: string; promotionTextZh?: string
 }
 export interface CreditPackage { name: string; remaining: number; total: number; expires: string }
 export interface Quota { available: boolean; remaining: number; total: number; packages: CreditPackage[] }
@@ -16,6 +17,9 @@ export function readDetails(value: unknown): AccountDetails {
     if (!record(model) || !['id', 'name', 'description', 'billingLabel', 'promotionEndsAt', 'promotionText'].every(key => typeof model[key] === 'string')
       || !amount(model.contextWindow) || !amount(model.maxTokens)
       || !['vision', 'reasoning', 'free'].every(key => typeof model[key] === 'boolean')) throw new Error('Invalid model details')
+    if (!['descriptionZh', 'promotionTextZh'].every(key => model[key] === undefined || typeof model[key] === 'string')) {
+      throw new Error('Invalid localized model details')
+    }
   }
   const quota = value.quota
   if (typeof quota.available !== 'boolean' || !amount(quota.remaining) || !amount(quota.total) || !Array.isArray(quota.packages)) throw new Error('Invalid quota details')
@@ -30,3 +34,12 @@ export function readDetails(value: unknown): AccountDetails {
 export function amount(value: unknown): value is number { return typeof value === 'number' && Number.isFinite(value) && value >= 0 }
 /** Narrow a JSON object. @param value Wire value. @returns Object validity. */
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
+
+/** Select account metadata using the interface language, preserving older gateway responses.
+ * @param model Validated public model. @param language Interface language identifier.
+ * @returns Localized description and promotion text with English/default fallback.
+ */
+export function localizedModelText(model: ModelDetail, language: string): { description: string; promotionText: string } {
+  return { description: language === 'zh' ? model.descriptionZh || model.description : model.description,
+    promotionText: language === 'zh' ? model.promotionTextZh || model.promotionText : model.promotionText }
+}

@@ -37,7 +37,7 @@ def billing(model: dict, promotions: list, now: datetime | None = None) -> dict:
     label = model.get("credits", "")
     rate = multiplier(label)
     result = {"label": label if rate is not None else "", "multiplier": rate,
-              "free": rate == 0, "promotionEndsAt": "", "promotionText": ""}
+              "free": rate == 0, "promotionEndsAt": "", "promotionText": "", "promotionTextZh": ""}
     eligible = [item for item in promotions if isinstance(item, dict)
                 and active_promotion(item, model["id"], now)]
     eligible.sort(key=lambda item: item.get("priority", 0) if isinstance(item.get("priority", 0), (int, float)) else 0, reverse=True)
@@ -54,5 +54,7 @@ def billing(model: dict, promotions: list, now: datetime | None = None) -> dict:
         result.update(free=rate == 0, multiplier=rate, label=discount["discountedCredits"])
     result["promotionEndsAt"] = promotion["schedule"]["validUntil"]
     hover = promotion.get("hover") or {}
-    result["promotionText"] = str(hover.get("textZh") or "")[:1000] if isinstance(hover, dict) else ""
+    if isinstance(hover, dict):
+        result["promotionText"] = str(hover.get("textEn") or hover.get("textZh") or "")[:1000]
+        result["promotionTextZh"] = str(hover.get("textZh") or hover.get("textEn") or "")[:1000]
     return result

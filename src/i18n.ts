@@ -1,6 +1,6 @@
 /** Locale-owned strings for the WorkBuddy settings section. */
 export const en = {
-  nav: 'WorkBuddy', title: 'WorkBuddy', connect: 'Connect WorkBuddy', disconnect: 'Sign out',
+  language: 'en', nav: 'WorkBuddy', title: 'WorkBuddy', connect: 'Connect WorkBuddy', disconnect: 'Sign out',
   refresh: 'Refresh', checking: 'Checking connection', connected: 'Connected', disconnected: 'Not connected',
   waiting: 'Waiting for browser authorization', open: 'Open sign-in page', models: 'Available models',
   error: 'WorkBuddy request failed', expired: 'Authorization timed out', account: 'Account',
@@ -12,7 +12,7 @@ export const en = {
   website: 'WorkBuddy account', modelList: 'Model catalog',
 }
 export const zh: Record<keyof typeof en, string> = {
-  nav: 'WorkBuddy', title: 'WorkBuddy', connect: '\u767b\u5f55 WorkBuddy', disconnect: '\u9000\u51fa\u767b\u5f55',
+  language: 'zh', nav: 'WorkBuddy', title: 'WorkBuddy', connect: '\u767b\u5f55 WorkBuddy', disconnect: '\u9000\u51fa\u767b\u5f55',
   refresh: '\u5237\u65b0', checking: '\u6b63\u5728\u68c0\u67e5\u8fde\u63a5', connected: '\u5df2\u8fde\u63a5', disconnected: '\u5c1a\u672a\u8fde\u63a5',
   waiting: '\u7b49\u5f85\u6d4f\u89c8\u5668\u5b8c\u6210\u6388\u6743', open: '\u6253\u5f00\u767b\u5f55\u9875', models: '\u53ef\u7528\u6a21\u578b',
   error: 'WorkBuddy \u8bf7\u6c42\u5931\u8d25', expired: '\u6388\u6743\u5df2\u8d85\u65f6', account: '\u8d26\u53f7',

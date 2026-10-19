@@ -10,11 +10,11 @@
 
 当前定位为面向已有 DSH 用户的早期自托管集成。每个 Python 服务管理一个 WorkBuddy 账号，同一 DSH 实例的已认证用户共享该账号及额度。不同信任边界应使用独立部署，当前没有租户隔离能力。
 
-设置页已有英文和中文词典，但模型描述、活动文案和模型选择器的免费标记仍存在中文优先或固定中文的行为。完整英文体验及英文截图仍需补齐。
+设置页支持英文和简体中文，上游提供的模型描述与活动文案会按界面语言显示并支持回退。模型选择器的免费标记使用英文。
 
-模型是否可用及额度以自己的上游账号为准。当前 provider 的数值成本元数据对所有模型均填零，这不代表所有模型免费；请查看设置中的明确免费标记及实时额度。本项目为独立社区集成，不主张得到 WorkBuddy 或 DeepSeek 的官方授权或背书。
+模型可用性、Credits 倍率和限时免费活动以自己的上游账号为准，请查看设置中的实时额度。本项目为独立社区集成，不主张得到 WorkBuddy 或 DeepSeek 的官方授权或背书。
 
-目前请从源码安装；包归档经过本地检查，但仍需清理打包内容后再发布到包注册表。面向海外市场的具体补充项见[本地开源评估](docs/OPEN_SOURCE_REVIEW.zh-CN.md)。贡献、问题反馈和交接材料分别见 [CONTRIBUTING](CONTRIBUTING.md)、[SUPPORT](SUPPORT.md)、[SECURITY](SECURITY.md) 和[英文运行手册](docs/OPERATIONS.md)。
+安装步骤及完整鉴权网关示例见[部署指南](deploy/README.md)。贡献、问题反馈、安全与日常维护说明分别见 [CONTRIBUTING](CONTRIBUTING.md)、[SUPPORT](SUPPORT.md)、[SECURITY](SECURITY.md) 和[运行手册](docs/OPERATIONS.md)。
 
 ## 界面截图
 
@@ -40,7 +40,7 @@
 
 ## 安装
 
-需要兼容的 DSH 环境；Node.js 版本要求为 `^22.19.0 || >=24.0.0`。在插件目录执行：
+使用 DSH 包版本 `0.2.0-rc.2`；Node.js 版本要求为 `^22.19.0 || >=24.0.0`。在插件目录执行：
 
 ```sh
 pnpm install --frozen-lockfile
@@ -64,10 +64,10 @@ dsh plugin --profile web add /absolute/path/to/dsh-workbuddy
 
 ## 服务部署
 
-已验证的上游版本为 `1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc`。单独检出上游项目并切换到该版本，使用 `uv sync` 安装依赖，再通过其虚拟环境运行本插件的服务入口：
+需要 Python 3.10+ 和 uv。单独检出上游项目并切换到版本 `1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc`。在本插件目录执行 `uv sync --frozen --no-dev` 安装锁定的服务依赖，再通过本插件的虚拟环境启动：
 
 ```sh
-/absolute/path/to/workbuddy2api/.venv/bin/uvicorn \
+/absolute/path/to/dsh-workbuddy/.venv/bin/uvicorn \
   --app-dir /absolute/path/to/dsh-workbuddy/server \
   workbuddy_service:create_app --factory \
   --host 127.0.0.1 --port 18788
@@ -92,18 +92,17 @@ dsh plugin --profile web add /absolute/path/to/dsh-workbuddy
 ```sh
 pnpm test
 pnpm typecheck
-pnpm build
+pnpm check:package
 ```
 
-Python 测试需使用已安装上游依赖的虚拟环境，并将上游及本插件的 `server` 目录加入 `PYTHONPATH`：
+Python 测试使用本插件的锁定依赖，并将上游的 `server` 目录加入 `PYTHONPATH`。安装 Caddy 后会同时运行真实网关的鉴权及凭据剥离测试：
 
 ```sh
-PYTHONPATH=/absolute/path/to/workbuddy2api/server:/absolute/path/to/dsh-workbuddy/server \
-  /absolute/path/to/workbuddy2api/.venv/bin/pytest \
-  server/test_session.py server/test_pricing.py
+uv sync --frozen
+PYTHONPATH=/absolute/path/to/workbuddy2api/server uv run --frozen pytest
 ```
 
-实际验收还需检查 DSH 设置页、账号授权、流式文本，以及完整的工具调用与结果回传。上游目前有一条过时的客户端请求头断言；本插件没有修改或屏蔽该断言。
+CI 覆盖 Node.js 22/24 和 Python 3.10/3.14。`pnpm check:package` 会构建并检查实际发布包；真实账号验收还需检查 DSH 设置页、账号授权、流式文本，以及完整的工具调用与结果回传。
 
 ## 卸载
 

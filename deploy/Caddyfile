@@ -1,0 +1,15 @@
+# Configure the public HTTPS address and local backend through the service environment.
+{
+	admin off
+}
+
+{$WORKBUDDY_GATEWAY_ADDRESS} {
+	bind {$WORKBUDDY_GATEWAY_BIND:0.0.0.0}
+	@unauthorized expression `{env.WORKBUDDY_GATEWAY_KEY} == "" || {http.request.header.Authorization} != "Bearer " + {env.WORKBUDDY_GATEWAY_KEY}`
+	route {
+		respond @unauthorized "Unauthorized" 401
+		reverse_proxy {$WORKBUDDY_BACKEND_ADDR} {
+			header_up -Authorization
+		}
+	}
+}

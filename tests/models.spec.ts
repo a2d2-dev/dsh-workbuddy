@@ -24,7 +24,7 @@ describe('account model discovery', () => {
       { ...entry, id: 'flash', billing: { free: true } },
       { ...entry, id: 'flash-sg', billing: { free: false, label: 'x0.03' } },
     ] }, 'http://gateway.test')
-    expect(models.map(model => model.name)).toEqual(['flash [\u514d\u8d39]', 'flash-sg'])
+    expect(models.map(model => model.name)).toEqual(['flash [Free]', 'flash-sg'])
     expect(parseModels({ data: [entry] }, 'http://gateway.test')[0].name).toBe(entry.name)
   })
   it.each([{ data: [entry, entry] }, { data: [{ ...entry, maxTokens: 0 }] }, {},
@@ -33,5 +33,11 @@ describe('account model discovery', () => {
   })
   it.each(['https://key@gateway.test', 'file:///secret', 'https://gateway.test?key=x'])('refuses credential-bearing or non-HTTP origins', gatewayBaseURL => {
     expect(() => gatewayURL({ gatewayBaseURL, gatewayKeyFile: '/secret' } as Config)).toThrow()
+  })
+  it.each(['http://gateway.test', 'http://localhost.evil.test', 'http://192.0.2.1'])('rejects plaintext remote gateway credentials for %s', gatewayBaseURL => {
+    expect(() => gatewayURL({ gatewayBaseURL, gatewayKeyFile: '/secret' } as Config)).toThrow('HTTPS')
+  })
+  it.each(['http://localhost:18788', 'http://127.0.0.1:18788', 'http://[::1]:18788', 'https://gateway.test'])('accepts secure or loopback gateway %s', gatewayBaseURL => {
+    expect(gatewayURL({ gatewayBaseURL, gatewayKeyFile: '/secret' } as Config)).toBe(gatewayBaseURL)
   })
 })

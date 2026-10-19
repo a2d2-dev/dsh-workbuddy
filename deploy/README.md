@@ -1,34 +1,63 @@
 # Deployment Guide
 
-Install the plugin in your DSH `web` profile, then open Settings → WorkBuddy to authorize your account. No desktop application needs to remain running after authorization. All paths below are example deployment locations; adapt them to your host.
+Deploy the plugin, its Python service and an authenticated HTTPS gateway. The Python listener stays on loopback. Every Python service owns one WorkBuddy account shared by its DSH instance; deploy separate instances for separate accounts or trust boundaries.
 
-## Runtime
+## Prerequisites
 
-| Component | Location |
+- Node.js `^22.19.0 || >=24.0.0`, pnpm, and DSH packages `0.2.0-rc.2`.
+- Python 3.10+, uv, Caddy and a persistent service manager such as Supervisor.
+- A domain with DNS pointing to the gateway and network access for Caddy certificate issuance, DSH-to-gateway requests and upstream account/model requests.
+- A WorkBuddy account that can access the requested models.
+
+## Plugin and Service
+
+Build and install the plugin as described in [README.md](../README.md). The following paths are examples; adapt the paths, service account and executable locations to your host.
+
+```sh
+git clone https://github.com/Zhengyuuuui/workbuddy2api.git /opt/workbuddy2api
+git -C /opt/workbuddy2api checkout --detach 1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc
+cd /opt/dsh-workbuddy
+uv sync --frozen --no-dev
+```
+
+The plugin's `pyproject.toml` and `uv.lock` own the service dependencies. The upstream checkout provides protocol source; its own virtual environment is not used. Set `WORKBUDDY_PROXY_SOURCE` to that checkout. Configure `WORKBUDDY_ENDPOINT`, `WORKBUDDY_SESSION_FILE`, `WORKBUDDY_LOGIN_TTL_SECONDS` and `WORKBUDDY_LOG_FILE` as documented in the main README.
+
+Provision private writable session/log directories through your deployment system and run the service under its intended account. Use [workbuddy2api.conf](workbuddy2api.conf) as a Supervisor example. Keep the listener at `127.0.0.1:18788` (or another loopback address/port selected for your deployment) with one worker per account.
+
+## Authenticated Gateway
+
+Deploy the supplied [Caddyfile](Caddyfile) and provision these variables through the gateway's service environment. [gateway.env.example](gateway.env.example) shows the format; its blank key deliberately denies all access.
+
+| Variable | Purpose |
 | --- | --- |
-| Plugin checkout | `/opt/dsh-workbuddy` |
-| DSH runtime | Your DSH installation directory |
-| Physical profile home | The physical directory selected by `DSH_HOME` |
-| Supervisor programs | `workbuddy2api`, `workbuddy2api-gateway` |
-| Backend listener | `127.0.0.1:18788` |
-| Authenticated gateway | `https://workbuddy-gateway.example.com` |
-| WorkBuddy credentials | `/var/lib/workbuddy2api/session.json` |
-| Gateway key for DSH | `/etc/workbuddy2api/gateway-key` |
-| Gateway environment and Caddy | `/etc/workbuddy2api/` |
-| Protocol implementation | `/opt/workbuddy2api` |
+| `WORKBUDDY_GATEWAY_ADDRESS` | Your public HTTPS origin, for example `https://workbuddy-gateway.example.com` |
+| `WORKBUDDY_GATEWAY_BIND` | Listening interface; the example uses `0.0.0.0` |
+| `WORKBUDDY_BACKEND_ADDR` | Local Python address, for example `127.0.0.1:18788` |
+| `WORKBUDDY_GATEWAY_KEY` | High-entropy bearer secret supplied by your secret store |
 
-`workbuddy2api.conf` is an example Supervisor configuration. Provision its directories with ownership appropriate for your service account before starting it. Configure Caddy with an authenticated listener reachable by DSH, forwarding only to the loopback Python backend. The gateway must validate its separate bearer key and strip it before forwarding. Endpoint addresses and paths are deployment settings, not plugin defaults. Credential contents must never be copied into this repository.
+Store the same gateway key, without an assignment prefix, in the file selected by DSH's `gatewayKeyFile`. Keep that file and the gateway environment private. Do not reuse an upstream account token as the gateway key. DSH requires HTTPS outside loopback.
 
-## Updates
+The Supervisor example expects the Caddyfile at `/etc/workbuddy2api/Caddyfile` and a shell-compatible environment file at `/etc/workbuddy2api/gateway.env`. Provision them using the deployment system. Only source environment files you control. With those variables exported, validate the configuration before starting the gateway:
 
-Build the plugin with Node 22 and `pnpm install --frozen-lockfile && pnpm test && pnpm build`. Run `supervisorctl restart workbuddy2api` for Python service changes, and restart `dsh-web-server` for host plugin changes. Browser assets are served through DSH's plugin loader.
+```sh
+caddy validate --config /etc/workbuddy2api/Caddyfile --adapter caddyfile
+```
 
-For profile package operations, use the pnpm version selected by that profile, set `DSH_HOME` to its physical home directory, and use the same pnpm store as the existing installation. A home-directory symlink can produce invalid relative package links when pnpm installs from the physical directory. Re-resolve affected local dependencies through the manager's `update` command; do not manually repair generated links or lockfiles. Reload existing browser tabs after deployment and verify that they display the updated settings.
+The configuration authenticates all paths, returns 401 for missing/incorrect credentials, denies requests when the configured key is empty or missing, and strips Authorization before forwarding to Python. Secrets remain runtime environment placeholders in Caddy's adapted configuration. The admin API is disabled; apply configuration changes by restarting the supervised process. Do not add unauthenticated health or fallback routes.
 
-## Acceptance
+## Verification and Updates
 
-Validated with 20 TypeScript tests, 15 Python tests, a successful build, and browser checks at desktop and mobile sizes. The settings page exposes real credit packages and a searchable catalog; browser acceptance verifies that searching DeepSeek returns distinct regular/SG routes and the free-only filter excludes SG. Free labels come from explicit upstream prices and active scheduled promotions; unknown prices stay unknown. `verify_gateway.py` verifies missing-key rejection, account discovery, streaming tool-call arguments, and a second request containing the tool result.
+```sh
+pnpm install --frozen-lockfile
+pnpm test
+pnpm typecheck
+pnpm check:package
+uv sync --frozen
+PYTHONPATH=/opt/workbuddy2api/server uv run --frozen pytest
+```
 
-For end-to-end acceptance, select an available WorkBuddy model in a test DSH conversation, request a read-only tool call, and verify both tool execution and the final model response. Model counts, balances, and active promotions depend on the connected account.
+The gateway integration tests start the shipped Caddy configuration and a local test backend, requiring no live account. They verify rejection, credential stripping and missing-secret behavior. Install Caddy before running the full suite; CI includes it.
 
-Back up your profile overlay and existing service configuration before installation. Remove only this plugin's profile entry/bundle when uninstalling; preserve subsequent unrelated profile edits.
+Back up the working plugin commit and relevant profile/service configuration before an update. Restart Python for service changes and restart the DSH host for host-plugin changes; reload existing browser tabs. Use the package manager and the profile's physical home and pnpm store for profile operations. Do not manually repair generated links or lockfiles.
+
+Complete live streaming and tool-call acceptance and follow the recovery steps in [Service Operations](../docs/OPERATIONS.md). Remove only this plugin's profile entry/bundle when uninstalling. Sign out first if credentials should be deleted; uninstall alone retains the session file.

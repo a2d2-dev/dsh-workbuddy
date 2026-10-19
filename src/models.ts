@@ -2,6 +2,7 @@
 import { createProvider, type Api, type Model, type ModelThinkingLevel } from '@earendil-works/pi-ai'
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy'
 import { record } from './backend.js'
+import { en } from './i18n.js'
 
 export const PROVIDER = 'workbuddy'
 export const DISPLAY_NAME = 'WorkBuddy'
@@ -35,6 +36,7 @@ export function parseModels(payload: unknown, baseURL: string): Model<Api>[] {
       contextWindow: capacity(value.contextWindow), maxTokens: capacity(value.maxTokens),
       input: value.supportsImages === true ? ['text', 'image'] : ['text'],
       reasoning: supported.length > 0, ...(supported.length ? { thinkingLevelMap } : {}),
+      // Required pi-ai placeholder, matching DSH's NO_COST; actual billing is account Credits.
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
       compat: { supportsStore: false, supportsDeveloperRole: false, maxTokensField: 'max_tokens',
         supportsReasoningEffort: supported.length > 0, supportsUsageInStreaming: true, supportsStrictMode: false },
@@ -48,7 +50,7 @@ export function parseModels(payload: unknown, baseURL: string): Model<Api>[] {
 function modelName(value: Record<string, unknown>, names: unknown[]): string {
   const name = typeof value.name === 'string' && names.filter(name => name === value.name).length === 1
     ? value.name : String(value.id)
-  return record(value.billing) && value.billing.free === true ? `${name} [\u514d\u8d39]` : name
+  return record(value.billing) && value.billing.free === true ? `${name} [${en.free}]` : name
 }
 
 /** Build one immutable provider snapshot.

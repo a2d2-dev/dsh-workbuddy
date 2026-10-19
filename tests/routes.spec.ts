@@ -16,7 +16,7 @@ class FakeBackend extends Backend {
 }
 
 async function fixture() {
-  const backend = new FakeBackend({ gatewayBaseURL: 'http://gateway.test', gatewayKeyFile: '/secret' } as Config)
+  const backend = new FakeBackend({ gatewayBaseURL: 'https://gateway.test', gatewayKeyFile: '/secret' } as Config)
   const changed = vi.fn()
   const handler = createHandler(backend, req => req.headers.host !== '127.0.0.1' ? 403
     : req.headers.cookie?.includes('dsh-auth-test=owner') ? undefined : 401, changed)

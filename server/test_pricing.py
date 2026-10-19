@@ -32,3 +32,19 @@ def test_unknown_price_stays_unknown_and_secrets_are_not_forwarded():
     result = billing({"id": "auto", "credits": "", "apiKey": "secret"}, [])
     assert result["multiplier"] is None and result["free"] is False
     assert "apiKey" not in result
+
+
+def test_promotions_preserve_both_languages_without_changing_billing():
+    """Given bilingual promotion copy, keep English/Chinese text and the upstream price independent."""
+    promotion = {"enabled": True, "modelIds": ["model"], "discount": {"discountedCredits": "x0.03"},
+                 "schedule": {"validFrom": "2026-01-01T00:00:00Z", "validUntil": "2027-01-01T00:00:00Z"},
+                 "hover": {"textEn": "English promotion", "textZh": "中文活动"}}
+    current = datetime(2026, 10, 19, tzinfo=timezone.utc)
+    result = billing({"id": "model", "credits": "x0.1"}, [promotion], current)
+    assert result["promotionText"] == "English promotion"
+    assert result["promotionTextZh"] == "中文活动"
+    assert result["free"] is False and result["multiplier"] == 0.03
+    promotion["hover"] = {"textZh": "中文活动"}
+    assert billing({"id": "model"}, [promotion], current)["promotionText"] == "中文活动"
+    promotion["hover"] = {"textEn": "English promotion"}
+    assert billing({"id": "model"}, [promotion], current)["promotionTextZh"] == "English promotion"

@@ -12,7 +12,7 @@ The Python service does not implement inbound bearer authentication. It must lis
 
 DSH account routes rely on the host's authentication guard and a custom request header. A gateway key authorizes access to the shared service; it does not identify separate tenants. All authenticated users of a DSH instance can use its connected WorkBuddy account, and account controls affect that shared account. Deploy separate service instances and credentials for separate trust boundaries.
 
-Gateway URL validation currently accepts HTTP as well as HTTPS. Operators must require HTTPS for remote destinations; successful configuration validation does not establish transport security.
+Gateway URL validation requires HTTPS for remote destinations. HTTP is accepted only for `localhost`, `127.0.0.1` and `[::1]`. The supplied [Caddy configuration](deploy/Caddyfile) rejects requests when its key is empty or missing and strips the gateway Authorization header before forwarding.
 
 ## Data Flow
 

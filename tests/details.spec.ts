@@ -1,7 +1,7 @@
 /** Verify public quota and model details cannot expose credentials or invent balances. */
 import { expect, it } from 'vitest'
 import { modelDetails, quotaDetails } from '../src/details.js'
-import { readDetails } from '../src/details-wire.js'
+import { localizedModelText, readDetails } from '../src/details-wire.js'
 
 it('preserves actual credit packages without forwarding private response fields', () => {
   const result = quotaDetails({ available: true, total_remain: 75, total_size: 100, secret: 'hidden',
@@ -23,4 +23,16 @@ it('retains billing metadata and capabilities through the browser wire boundary'
   expect(models[0]).not.toHaveProperty('apiKey')
   expect(readDetails({ models, quota: quotaDetails({}), updatedAt: '2026-10-16T00:00:00Z' }).models).toEqual(models)
   expect(() => readDetails({ models: [{}], quota: {}, updatedAt: '' })).toThrow()
+})
+
+it('retains English and Chinese account text from gateway response through locale selection', () => {
+  const models = modelDetails({ data: [{ id: 'model', contextWindow: 1000, maxTokens: 100,
+    description: 'English description', descriptionZh: '中文说明',
+    billing: { promotionText: 'English promotion', promotionTextZh: '中文活动' } }] }, 'https://gateway.test')
+  const { models: [model] } = readDetails({ models, quota: quotaDetails({}), updatedAt: '2026-10-19T00:00:00Z' })
+  expect(localizedModelText(model, 'en')).toEqual({ description: 'English description', promotionText: 'English promotion' })
+  expect(localizedModelText(model, 'zh')).toEqual({ description: '中文说明', promotionText: '中文活动' })
+  expect(localizedModelText({ ...model, descriptionZh: undefined, promotionTextZh: undefined }, 'zh'))
+    .toEqual(localizedModelText(model, 'en'))
+  expect(() => readDetails({ models: [{ ...model, descriptionZh: 42 }], quota: quotaDetails({}), updatedAt: '' })).toThrow()
 })

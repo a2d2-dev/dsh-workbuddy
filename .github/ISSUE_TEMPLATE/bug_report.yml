@@ -1,0 +1,31 @@
+name: Bug report
+description: Report an installation, account, model, or streaming problem.
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include tokens, authorization URLs, session files, account identifiers, raw HAR exports, prompts or tool results. See SECURITY.md for vulnerabilities."
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and versions
+      description: Plugin commit/version, DSH version, OS, browser/language, Node.js, pnpm and Python.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include installation method and which operation fails.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Failure time/timezone, HTTP status and response shape. Remove credentials and private data.
