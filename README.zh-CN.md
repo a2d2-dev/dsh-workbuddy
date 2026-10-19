@@ -2,19 +2,57 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-为 DeepSeek Harness（DSH）提供 WorkBuddy 账号登录和模型调用的独立插件。在「设置 → WorkBuddy」中完成浏览器授权，查看账号状态、Credits 余额、额度到期明细，以及支持搜索和免费筛选的模型清单。模型选择器会展示 WorkBuddy 模型，通过模型 ID 区分同名入口，并标记明确免费的模型。
+**在 DeepSeek Harness 里连接 WorkBuddy 账号，查看额度、比较可用模型，并直接用于 DSH 对话。**
 
-本插件独立于 A2D2 和 DimAgent 插件。模型请求复用 DSH 的 `PiAiAdapter`，单独运行的 Python 服务引用 [workbuddy2api](https://github.com/Zhengyuuuui/workbuddy2api)，处理流式响应和工具调用协议转换。授权凭据保存在服务端，浏览器只接收授权链接和账号状态；完成授权后，无需持续运行 WorkBuddy 桌面客户端。
+面向 DSH web profile 的独立社区插件。当前为 **自托管 Alpha**，适合已有 DSH、能够维护 Python 服务与鉴权网关的用户。本项目不提供托管服务，也不主张获得 WorkBuddy 或 DeepSeek 的官方背书。
 
-## 项目状态
+[开始使用](#快速上手) · [部署指南](deploy/README.md) · [安全与数据处理](SECURITY.md) · [问题反馈](SUPPORT.md)
 
-当前定位为面向已有 DSH 用户的早期自托管集成。每个 Python 服务管理一个 WorkBuddy 账号，同一 DSH 实例的已认证用户共享该账号及额度。不同信任边界应使用独立部署，当前没有租户隔离能力。
+## 能帮你做什么
 
-设置页已有英文和中文词典，但模型描述、活动文案和模型选择器的免费标记仍存在中文优先或固定中文的行为。完整英文体验及英文截图仍需补齐。
+- **在 DSH 里看清账号与额度：**通过浏览器登录，在「设置 → WorkBuddy」查看连接状态、Credits 余额和各额度包到期时间。
+- **更容易选对模型：**按名称或 ID 搜索，区分同名入口，比较 Credits 倍率与能力，筛选上游计费或有效活动明确标为免费的模型。目录仅纳入账号可用且支持工具调用的模型。
+- **沿用 DSH 的工作流：**在 WorkBuddy provider 下选择模型，使用流式响应与工具调用。浏览器授权完成后，无需持续运行 WorkBuddy 桌面客户端。
 
-模型是否可用及额度以自己的上游账号为准。当前 provider 的数值成本元数据对所有模型均填零，这不代表所有模型免费；请查看设置中的明确免费标记及实时额度。本项目为独立社区集成，不主张得到 WorkBuddy 或 DeepSeek 的官方授权或背书。
+本插件独立于 A2D2 和 DimAgent 插件。[界面截图](#界面截图)展示当前体验，后续发布工作见[发布准备清单](docs/LAUNCH_READINESS.md)。
 
-目前请从源码安装；包归档经过本地检查，但仍需清理打包内容后再发布到包注册表。面向海外市场的具体补充项见[本地开源评估](docs/OPEN_SOURCE_REVIEW.zh-CN.md)。贡献、问题反馈和交接材料分别见 [CONTRIBUTING](CONTRIBUTING.md)、[SUPPORT](SUPPORT.md)、[SECURITY](SECURITY.md) 和[英文运行手册](docs/OPERATIONS.md)。
+## 连接前请确认
+
+- **第三方集成的许可：**WorkBuddy [可接受使用政策](https://www.workbuddy.ai/document/acceptable-use-policy)第 3.5、4 节限制自动化访问，并要求互操作插件及外部组件事先取得书面许可。请结合适用的[服务协议](https://www.workbuddy.ai/document/term)确认该接入方式获准后再使用。浏览器登录成功，不等于平台批准了第三方客户端。
+- **一个服务共享一个账号：**每个 Python 服务管理一个 WorkBuddy 账号，同一 DSH 实例的已认证用户共享其额度和账号控制。当前没有租户隔离；不同信任边界应独立部署，并遵守上游账号规则。
+- **免费状态有条件：**模型、活动、有效期及用量限制以上游账号规则为准，插件不会增加额度或提供无限使用。当前 provider 的数值成本字段对所有模型均填零，不能据此判断免费。详见[费用与限制](#费用与限制)。
+
+## 快速上手
+
+### 前置条件
+
+| 需要准备 | 检查要点 |
+| --- | --- |
+| 已运行的 DSH web 环境 | 本地评估使用 DSH 包 `0.2.0-rc.2`；更宽的 peer-dependency 范围不等于已验证兼容范围 |
+| Node.js 与 pnpm | Node.js `^22.19.0 || >=24.0.0`；使用仓库锁文件，先前评估使用 pnpm `10.4.1` |
+| Python 服务主机 | Python `>=3.10`、`uv`、固定版本的 `workbuddy2api` 与常驻服务管理器 |
+| 鉴权网关 | 每个转发路由都需鉴权，转发时剥离网关 Bearer 凭据，跨主机使用 HTTPS；Python 仅监听回环地址 |
+| 符合条件的 WorkBuddy 账号 | 确认第三方接入获准，且账号提供适用模型 |
+
+当前需要从源码部署多个组件。仓库有 Supervisor 示例，但**尚未提供完整的鉴权网关配置**；连接账号前，需要自行部署并验证网关。
+
+### 从源码到第一条对话
+
+1. **构建插件：**执行下方[安装](#安装)中的源码构建命令。
+2. **准备后端：**检出固定版本的上游项目，设置私有凭据与日志路径。按照[服务部署](#服务部署)及[首次部署步骤](deploy/README.md#first-time-setup)配置。
+3. **验证并连接网关：**先确认缺失和错误凭据都会被拒绝，再将插件安装到 DSH profile，配置 `gatewayBaseURL` 和 `gatewayKeyFile`。
+4. **在 DSH 中授权：**进入「设置 → WorkBuddy」，点击「登录 WorkBuddy」和「打开登录页」，完成浏览器授权后回到原设置页。确认显示「已连接」、模型清单和额度信息，必要时点击「刷新」。
+5. **测试一条简短对话：**在 **WorkBuddy** provider 下选择可用模型。如果要用 DeepSeek，先在目录搜索 `DeepSeek`，核对具体模型 ID、计费信息和活动截止时间。先发一条简短提示，再验证一次只读工具调用与结果回传。测试可能消耗额度。
+
+成功标准是设置页显示账号、选中的模型能流式回复、工具结果能回到同一对话。仅显示「已连接」不足以证明推理可用。遇到问题请查看[常见检查项](SUPPORT.md#common-checks)，不要通过关闭网关鉴权排障。
+
+## 工作方式
+
+```text
+DSH 网页 → DSH 主机插件 → 鉴权网关 → 回环地址上的 Python 服务 → WorkBuddy
+```
+
+模型请求复用 DSH 的 `PiAiAdapter`。独立运行的 Python 服务引用固定版本的 [workbuddy2api](https://github.com/Zhengyuuuui/workbuddy2api)，处理流式响应和工具调用协议转换。WorkBuddy Token 保存在服务端，浏览器只接收授权链接和账号信息；提示词、对话历史及工具数据会发送给上游进行推理。完整数据流与保留边界见 [SECURITY.md](SECURITY.md)。
 
 ## 界面截图
 
@@ -38,13 +76,26 @@
 
 ![免费模型筛选，当前显示三个模型](docs/screenshots/free-models.png)
 
+## 费用与限制
+
+**能免费使用 DeepSeek 吗？** 账号资格、计费与允许的接入方式由上游决定。部分模型 ID 可能有临时活动，请核对账号当前返回的模型 ID、Credits 倍率、截止时间及用量限制。截图、其他渠道的十月活动或 DSH 中的零成本估算，都不能保证通过本插件发出的请求免费。
+
+**「仅看免费」代表什么？** 它筛选上游明确的零 Credits 计费或当前有效的活动信息，未知价格不会被当作免费。筛选结果不验证剩余活动次数，也不会覆盖每日上限、速率限制或服务条款。权威计费及权益请以 WorkBuddy 账号为准；额度「未提供」不等于余额为零。
+
 ## 安装
 
-需要兼容的 DSH 环境；Node.js 版本要求为 `^22.19.0 || >=24.0.0`。在插件目录执行：
+先核对[前置条件](#前置条件)，再克隆并构建源码：
 
 ```sh
+git clone https://github.com/a2d2-dev/dsh-workbuddy.git
+cd dsh-workbuddy
 pnpm install --frozen-lockfile
 pnpm build
+```
+
+服务与鉴权网关准备就绪后，安装到已有 DSH web profile：
+
+```sh
 dsh plugin --profile web add /absolute/path/to/dsh-workbuddy
 ```
 
@@ -104,6 +155,13 @@ PYTHONPATH=/absolute/path/to/workbuddy2api/server:/absolute/path/to/dsh-workbudd
 ```
 
 实际验收还需检查 DSH 设置页、账号授权、流式文本，以及完整的工具调用与结果回传。上游目前有一条过时的客户端请求头断言；本插件没有修改或屏蔽该断言。
+
+## 当前限制与社区
+
+- 当前请从源码安装。包归档仍需清理打包内容后再发布到包注册表。
+- 设置页已有中英文词典，但模型描述、活动文案和模型选择器免费标记仍有中文优先或固定中文的行为。截图为中文，完整英文体验与演示仍需补齐。
+- 上游协议或账号政策变化可能影响兼容性，正式使用前应在自己的部署中完成真实验收。
+- [贡献与本地验证](CONTRIBUTING.md) · [问题反馈](SUPPORT.md) · [运行手册](docs/OPERATIONS.md) · [开源评估](docs/OPEN_SOURCE_REVIEW.zh-CN.md)
 
 ## 卸载
 

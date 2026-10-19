@@ -2,6 +2,11 @@
 
 Reviewed locally on 2026-10-19 against source commit `06955ff`, package version `0.1.0`. Suitable for a source-based, self-hosted alpha for existing DSH users. Broader international promotion, registry distribution and a managed multi-user service need the work below. The [detailed Chinese review](OPEN_SOURCE_REVIEW.zh-CN.md) records the supporting findings.
 
+## Upstream Permission and Public Claims
+
+- [ ] Confirm that the intended third-party integration is permitted before inviting account connections or promoting access. WorkBuddy's [Acceptable Use Policy](https://www.workbuddy.ai/document/acceptable-use-policy), sections 3.5 and 4, restricts automated access and requires prior written permission for interoperating plugins and external components. Review the applicable [Service Agreement](https://www.workbuddy.ai/document/term); successful browser authorization is not proof of integration permission.
+- [ ] Verify each pricing claim against the exact model ID, account eligibility, region, activity dates and usage limits. A promotion for the official app does not establish the same entitlement through this plugin. Keep dated promotions separate from the project's enduring value, and never use the provider's zero cost metadata as proof of free inference.
+
 ## Deployment Gates
 
 - [ ] Deliver a reproducible gateway configuration with HTTPS between hosts, authentication on every forwarded route, and removal of the gateway bearer key before forwarding. The Python application itself accepts requests without this key and must stay on loopback. See `server/workbuddy_service.py` and `deploy/README.md`.
