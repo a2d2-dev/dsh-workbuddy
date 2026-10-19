@@ -32,8 +32,9 @@ export function modelDetails(payload: unknown, baseURL: string): ModelDetail[] {
     const billing = record(source.billing) ? source.billing : {}
     return { id: model.id, name: typeof source.name === 'string' ? source.name : model.id,
       contextWindow: model.contextWindow, maxTokens: model.maxTokens, vision: model.input.includes('image'),
-      reasoning: model.reasoning, description: text(source.description), billingLabel: text(billing.label),
-      free: billing.free === true, promotionEndsAt: text(billing.promotionEndsAt), promotionText: text(billing.promotionText) }
+      reasoning: model.reasoning, description: text(source.description), descriptionZh: text(source.descriptionZh),
+      billingLabel: text(billing.label), free: billing.free === true, promotionEndsAt: text(billing.promotionEndsAt),
+      promotionText: text(billing.promotionText), promotionTextZh: text(billing.promotionTextZh) }
   })
 }
 

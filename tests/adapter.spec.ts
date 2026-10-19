@@ -8,7 +8,7 @@ import { Backend, type Config } from '../src/backend.js'
 function fixture() {
   let complete!: (value: unknown) => void
   const pending = new Promise<unknown>(resolve => { complete = resolve })
-  const backend = new Backend({ gatewayBaseURL: 'http://gateway.test', gatewayKeyFile: '/secret',
+  const backend = new Backend({ gatewayBaseURL: 'https://gateway.test', gatewayKeyFile: '/secret',
     catalogTtlMs: 60000 } as Config)
   const request = vi.spyOn(backend, 'request').mockReturnValueOnce(pending).mockResolvedValue({ data: [] })
   return { adapter: new WorkBuddyAdapter(backend, {} as Context), complete, request }

@@ -14,7 +14,7 @@ An independent community plugin for the DSH web profile. **Self-hosted alpha**, 
 - **A clearer model choice:** search by name or ID, distinguish same-name routes, compare credit multipliers and capabilities, and filter models explicitly marked free by upstream billing or active promotions. The catalog includes account models that support tool calls.
 - **Your existing DSH workflow:** select the WorkBuddy provider for streamed responses and tool-call workflows. No WorkBuddy desktop process needs to remain running after browser authorization.
 
-This plugin is independent of the A2D2 orchestration and DimAgent plugins. The [screenshots](#screenshots) show the current interface; the [launch checklist](docs/LAUNCH_READINESS.md) tracks remaining release work.
+This plugin is independent of the A2D2 orchestration and DimAgent plugins. The [screenshots](#screenshots) show the current interface; the [operations guide](docs/OPERATIONS.md) covers acceptance and recovery.
 
 ## Before You Connect
 
@@ -29,12 +29,12 @@ This plugin is independent of the A2D2 orchestration and DimAgent plugins. The [
 | You need | What to check |
 | --- | --- |
 | An existing DSH web installation | Local review used DSH packages `0.2.0-rc.2`; the broader peer range is not a tested compatibility matrix |
-| Node.js and pnpm | Node.js `^22.19.0 || >=24.0.0`; use the committed lockfile (prior review used pnpm `10.4.1`) |
-| A Python service host | Python `>=3.10`, `uv`, the pinned `workbuddy2api` checkout, and a persistent service manager |
+| Node.js and pnpm | Node.js `^22.19.0 || >=24.0.0`; pnpm `10.4.1` is selected by `packageManager`; use the committed lockfile |
+| A Python service host | Python `>=3.10`, `uv`, the pinned `workbuddy2api` source, and a persistent service manager; dependencies are locked in this plugin |
 | An authenticated gateway | Authenticate every forwarded route, strip the gateway bearer key, and use HTTPS between hosts; keep Python on loopback |
 | An eligible WorkBuddy account | Confirm that the intended third-party access is permitted and that the account offers a suitable model |
 
-This is a source-based setup with multiple components. The repository includes a Supervisor example, but **does not yet include a complete authenticated gateway configuration**. Provision and verify that gateway before connecting an account.
+This is a source-based setup with multiple components. The repository includes a [Caddy gateway configuration](deploy/Caddyfile), [environment example](deploy/gateway.env.example), and [Supervisor example](deploy/workbuddy2api.conf). Adapt and verify them before connecting an account.
 
 ### From Source to Your First Conversation
 
@@ -113,7 +113,7 @@ Replace the example domain and absolute paths with your deployment values. The k
 
 ## Service
 
-Validated upstream revision: `1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc`. Install its dependencies with `uv sync` and run its virtual environment's `uvicorn --app-dir /absolute/path/to/dsh-workbuddy/server workbuddy_service:create_app --factory --host 127.0.0.1 --port 18788`. Set the following environment variables through the service supervisor:
+Requires Python 3.10+ and uv. Check out [workbuddy2api](https://github.com/Zhengyuuuui/workbuddy2api) at revision `1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc`. In this plugin directory, install the locked service dependencies with `uv sync --frozen --no-dev`, then run `.venv/bin/uvicorn --app-dir server workbuddy_service:create_app --factory --host 127.0.0.1 --port 18788`. Set the following environment variables through the service supervisor:
 
 | Variable | Purpose |
 | --- | --- |
@@ -123,18 +123,17 @@ Validated upstream revision: `1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc`. Install
 | `WORKBUDDY_LOGIN_TTL_SECONDS` | Authorization expiry in seconds, normally `300` |
 | `WORKBUDDY_LOG_FILE` | Protocol summary log path |
 
-See the [first-time deployment steps](deploy/README.md#first-time-setup) and [Supervisor example](deploy/workbuddy2api.conf). Use Supervisor or another persistent service manager, with a single service worker to own the account and its pending login. Refresh is serialized, and credential updates use atomic file replacement. Sign-out removes this service's authorization without revoking other devices. An expired login can be restarted from Settings. The gateway access key is deployment authentication, distinct from WorkBuddy account authorization.
+Use Supervisor or another persistent service manager, with a single service worker to own the account and its pending login. Refresh is serialized, and credential updates use atomic file replacement. Sign-out removes this service's authorization without revoking other devices. An expired login can be restarted from Settings. The gateway access key is deployment authentication, distinct from WorkBuddy account authorization.
 
 ## Verify
 
-Run `pnpm test`, `pnpm typecheck`, and `pnpm build`. For service tests use the upstream virtual environment with `PYTHONPATH=/path/to/upstream/server:/path/to/dsh-workbuddy/server pytest server/test_session.py server/test_pricing.py`. Real acceptance additionally requires DSH settings rendering, an authorized account, streamed text, and a tool-call round trip. Upstream currently has one stale client-header assertion; this package does not alter or suppress it.
+Run `pnpm test`, `pnpm typecheck`, and `pnpm check:package` (builds and verifies the distributable). For service tests run `uv sync --frozen`, then `PYTHONPATH=/absolute/path/to/workbuddy2api/server uv run --frozen pytest`. Install Caddy to include the real gateway integration tests. CI covers Node.js 22/24 and Python 3.10/3.14. Live acceptance additionally requires DSH settings rendering, an authorized account, streamed text, and a tool-call round trip.
 
-## Current Limitations and Community
+## Compatibility and Community
 
-- Source installation is the current path. Package archive contents still need cleanup before registry distribution.
-- English and Chinese settings dictionaries exist, but model descriptions, promotion copy and the model selector's free label still have Chinese-only behavior. Screenshots show Chinese; a full English walkthrough remains a release task.
-- Upstream protocol or account-policy changes can affect compatibility. Complete live acceptance in your own deployment before relying on it.
-- [Contributing and local verification](CONTRIBUTING.md) · [Support and bug reports](SUPPORT.md) · [Operator handover](docs/OPERATIONS.md) · [Launch readiness](docs/LAUNCH_READINESS.md)
+- Settings support English and Simplified Chinese, including model descriptions and promotion text when supplied by upstream. Provider model names use an English free label; the current screenshots show Chinese.
+- The documented DSH baseline is `0.2.0-rc.2`. A wider peer-dependency range does not establish compatibility with every later release; repeat live acceptance after host or upstream changes.
+- [Contributing and local verification](CONTRIBUTING.md) · [Support and bug reports](SUPPORT.md) · [Service operation and recovery](docs/OPERATIONS.md)
 
 ## Remove
 

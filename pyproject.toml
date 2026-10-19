@@ -1,0 +1,21 @@
+[project]
+name = "dsh-workbuddy-service"
+version = "0.1.0"
+description = "Account service for the DSH WorkBuddy plugin"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "httpx[socks]>=0.25.0",
+    "requests>=2.31.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=7.4.0"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["server"]
+pythonpath = ["server"]

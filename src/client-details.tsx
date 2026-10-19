@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import { Input } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { AccountDetails, ModelDetail, Quota } from './details-wire.js'
+import { localizedModelText } from './details-wire.js'
 import type { Translator } from './client-account.js'
 
 const table: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 12, textAlign: 'left' }
@@ -60,14 +61,15 @@ function QuotaView({ quota, t }: { quota: Quota; t: Translator }) {
  * @param props Safe model and locale. @returns One table row.
  */
 function ModelRow({ model, t }: { model: ModelDetail; t: Translator }) {
+  const { description, promotionText } = localizedModelText(model, t('language'))
   return <tr>
     <td style={{ ...cell, maxWidth: 250 }}><strong>{model.name}</strong>
       <div style={{ ...muted, overflowWrap: 'anywhere', marginTop: 4 }}>{model.id}</div>
-      {model.description && <div style={{ ...muted, marginTop: 4 }}>{model.description}</div>}
+      {description && <div style={{ ...muted, marginTop: 4 }}>{description}</div>}
     </td>
     <td style={cell}>{model.free ? <span style={freeStyle}>{t('free')}</span> : model.billingLabel || t('unavailable')}
       {model.free && model.billingLabel && <div style={{ ...muted, marginTop: 4 }}>{model.billingLabel}</div>}
-      {model.promotionEndsAt && <div style={{ ...muted, marginTop: 6 }} title={model.promotionText}>{t('promotionUntil')}<br />{date(model.promotionEndsAt)}</div>}
+      {model.promotionEndsAt && <div style={{ ...muted, marginTop: 6 }} title={promotionText}>{t('promotionUntil')}<br />{date(model.promotionEndsAt)}</div>}
     </td>
     <td style={cell}>{tokens(model.contextWindow)}</td><td style={cell}>{tokens(model.maxTokens)}</td>
     <td style={cell}>{[t('text'), ...(model.vision ? [t('vision')] : []), ...(model.reasoning ? [t('reasoning')] : [])].join(' / ')}</td>

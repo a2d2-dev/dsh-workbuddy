@@ -82,6 +82,18 @@ def test_catalog_does_not_expose_upstream_credentials():
     assert result["contextWindow"] == 1000000
 
 
+def test_catalog_preserves_both_languages_and_defaults_to_english():
+    """Given bilingual or single-language upstream metadata, return bounded text with fallback."""
+    model = {"id": "model", "maxAllowedSize": 1000, "maxOutputTokens": 100,
+             "descriptionEn": "English model", "descriptionZh": "中文模型"}
+    result = public_model(model)
+    assert result["description"] == "English model"
+    assert result["descriptionZh"] == "中文模型"
+    assert public_model({**model, "descriptionEn": ""})["description"] == "中文模型"
+    assert public_model({**model, "descriptionZh": ""})["descriptionZh"] == "English model"
+    assert len(public_model({**model, "descriptionEn": "x" * 2000})["description"]) == 1000
+
+
 def test_dsh_chats_never_share_implicit_upstream_continuations(tmp_path):
     """Identical model/system/tool shapes must still isolate independent requests."""
     state = IsolatedProxyState(FakeClient(tmp_path / "session.json"), None, None)

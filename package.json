@@ -6,12 +6,17 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": { ".": { "types": "./lib/index.d.ts", "default": "./lib/index.js" }, "./client": "./lib/client.js", "./package.json": "./package.json" },
-  "files": ["lib", "server", "cordis.patch.yml", "README.md", "LICENSE"],
+  "files": ["lib/*.js", "lib/*.d.ts", "server/*.py", "!server/test_*.py", "docs/screenshots/*.png", "docs/OPERATIONS.md", "deploy/README.md", "deploy/Caddyfile", "deploy/gateway.env.example", "deploy/workbuddy2api.conf", "deploy/verify_gateway.py", "pyproject.toml", "uv.lock", "cordis.patch.yml", "README*.md", "CONTRIBUTING.md", "SECURITY.md", "SUPPORT.md", "LICENSE"],
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },
     "client": { "inject": ["@deepseek-ai/dsh-client-locale", "@deepseek-ai/dsh-client-ui-settings"], "platform": "web" }
   },
-  "scripts": { "build": "tsc && node build-client.mjs", "typecheck": "tsc --noEmit", "test": "vitest run", "prepack": "pnpm build" },
+  "scripts": { "build": "tsc && node build-client.mjs", "typecheck": "tsc --noEmit", "test": "vitest run", "check:package": "node scripts/check-package.mjs", "prepack": "pnpm build" },
+  "packageManager": "pnpm@10.4.1",
+  "repository": { "type": "git", "url": "git+https://github.com/a2d2-dev/dsh-workbuddy.git" },
+  "homepage": "https://github.com/a2d2-dev/dsh-workbuddy#readme",
+  "bugs": { "url": "https://github.com/a2d2-dev/dsh-workbuddy/issues" },
+  "keywords": ["dsh", "deepseek-harness", "workbuddy", "llm", "tool-calling"],
   "license": "Apache-2.0",
   "engines": { "node": "^22.19.0 || >=24.0.0" },
   "peerDependencies": {

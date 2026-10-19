@@ -136,7 +136,8 @@ def public_model(model: dict, promotions: list | None = None) -> dict:
     if not isinstance(efforts, list):
         raise ValueError("Invalid WorkBuddy reasoning capabilities")
     return {"id": model["id"], "name": model.get("name", model["id"]),
-            "description": str(model.get("descriptionZh") or model.get("descriptionEn") or "")[:1000],
+            "description": str(model.get("descriptionEn") or model.get("descriptionZh") or "")[:1000],
+            "descriptionZh": str(model.get("descriptionZh") or model.get("descriptionEn") or "")[:1000],
             "billing": billing(model, promotions or []),
             "contextWindow": model["maxAllowedSize"], "maxTokens": model["maxOutputTokens"],
             "supportsImages": model.get("supportsImages") is True,

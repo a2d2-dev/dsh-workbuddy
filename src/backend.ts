@@ -24,6 +24,9 @@ export function gatewayURL(config: Config): string {
   const url = new URL(config.gatewayBaseURL)
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password
     || url.search || url.hash || url.pathname !== '/') throw new Error('gatewayBaseURL must be an HTTP(S) origin')
+  if (url.protocol === 'http:' && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) {
+    throw new Error('gatewayBaseURL must use HTTPS outside loopback')
+  }
   if (!isAbsolute(config.gatewayKeyFile)) throw new Error('gatewayKeyFile must be absolute')
   return url.origin
 }

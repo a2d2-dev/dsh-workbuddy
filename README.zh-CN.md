@@ -14,7 +14,7 @@
 - **更容易选对模型：**按名称或 ID 搜索，区分同名入口，比较 Credits 倍率与能力，筛选上游计费或有效活动明确标为免费的模型。目录仅纳入账号可用且支持工具调用的模型。
 - **沿用 DSH 的工作流：**在 WorkBuddy provider 下选择模型，使用流式响应与工具调用。浏览器授权完成后，无需持续运行 WorkBuddy 桌面客户端。
 
-本插件独立于 A2D2 和 DimAgent 插件。[界面截图](#界面截图)展示当前体验，后续发布工作见[发布准备清单](docs/LAUNCH_READINESS.md)。
+本插件独立于 A2D2 和 DimAgent 插件。[界面截图](#界面截图)展示当前体验，验收和恢复步骤见[运行手册](docs/OPERATIONS.md)。
 
 ## 连接前请确认
 
@@ -29,12 +29,12 @@
 | 需要准备 | 检查要点 |
 | --- | --- |
 | 已运行的 DSH web 环境 | 本地评估使用 DSH 包 `0.2.0-rc.2`；更宽的 peer-dependency 范围不等于已验证兼容范围 |
-| Node.js 与 pnpm | Node.js `^22.19.0 || >=24.0.0`；使用仓库锁文件，先前评估使用 pnpm `10.4.1` |
-| Python 服务主机 | Python `>=3.10`、`uv`、固定版本的 `workbuddy2api` 与常驻服务管理器 |
+| Node.js 与 pnpm | Node.js `^22.19.0 || >=24.0.0`；按 `packageManager` 使用 pnpm `10.4.1` 与仓库锁文件 |
+| Python 服务主机 | Python `>=3.10`、`uv`、固定版本的 `workbuddy2api` 源码与常驻服务管理器；依赖由本插件锁定 |
 | 鉴权网关 | 每个转发路由都需鉴权，转发时剥离网关 Bearer 凭据，跨主机使用 HTTPS；Python 仅监听回环地址 |
 | 符合条件的 WorkBuddy 账号 | 确认第三方接入获准，且账号提供适用模型 |
 
-当前需要从源码部署多个组件。仓库有 Supervisor 示例，但**尚未提供完整的鉴权网关配置**；连接账号前，需要自行部署并验证网关。
+当前需要从源码部署多个组件。仓库已提供 [Caddy 鉴权网关配置](deploy/Caddyfile)、[环境变量示例](deploy/gateway.env.example)与 [Supervisor 示例](deploy/workbuddy2api.conf)；连接账号前，请按自己的环境配置并验证。
 
 ### 从源码到第一条对话
 
@@ -115,10 +115,10 @@ dsh plugin --profile web add /absolute/path/to/dsh-workbuddy
 
 ## 服务部署
 
-已验证的上游版本为 `1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc`。单独检出上游项目并切换到该版本，使用 `uv sync` 安装依赖，再通过其虚拟环境运行本插件的服务入口：
+需要 Python 3.10+ 和 uv。单独检出上游项目并切换到版本 `1cc32c9a98abb53796d8d4e8d477736fe1f0c4cc`。在本插件目录执行 `uv sync --frozen --no-dev` 安装锁定的服务依赖，再通过本插件的虚拟环境启动：
 
 ```sh
-/absolute/path/to/workbuddy2api/.venv/bin/uvicorn \
+/absolute/path/to/dsh-workbuddy/.venv/bin/uvicorn \
   --app-dir /absolute/path/to/dsh-workbuddy/server \
   workbuddy_service:create_app --factory \
   --host 127.0.0.1 --port 18788
@@ -143,25 +143,23 @@ dsh plugin --profile web add /absolute/path/to/dsh-workbuddy
 ```sh
 pnpm test
 pnpm typecheck
-pnpm build
+pnpm check:package
 ```
 
-Python 测试需使用已安装上游依赖的虚拟环境，并将上游及本插件的 `server` 目录加入 `PYTHONPATH`：
+Python 测试使用本插件的锁定依赖，并将上游的 `server` 目录加入 `PYTHONPATH`。安装 Caddy 后会同时运行真实网关的鉴权及凭据剥离测试：
 
 ```sh
-PYTHONPATH=/absolute/path/to/workbuddy2api/server:/absolute/path/to/dsh-workbuddy/server \
-  /absolute/path/to/workbuddy2api/.venv/bin/pytest \
-  server/test_session.py server/test_pricing.py
+uv sync --frozen
+PYTHONPATH=/absolute/path/to/workbuddy2api/server uv run --frozen pytest
 ```
 
-实际验收还需检查 DSH 设置页、账号授权、流式文本，以及完整的工具调用与结果回传。上游目前有一条过时的客户端请求头断言；本插件没有修改或屏蔽该断言。
+CI 覆盖 Node.js 22/24 和 Python 3.10/3.14。`pnpm check:package` 会构建并检查实际发布包；真实账号验收还需检查 DSH 设置页、账号授权、流式文本，以及完整的工具调用与结果回传。
 
-## 当前限制与社区
+## 兼容性与社区
 
-- 当前请从源码安装。包归档仍需清理打包内容后再发布到包注册表。
-- 设置页已有中英文词典，但模型描述、活动文案和模型选择器免费标记仍有中文优先或固定中文的行为。截图为中文，完整英文体验与演示仍需补齐。
-- 上游协议或账号政策变化可能影响兼容性，正式使用前应在自己的部署中完成真实验收。
-- [贡献与本地验证](CONTRIBUTING.md) · [问题反馈](SUPPORT.md) · [运行手册](docs/OPERATIONS.md) · [开源评估](docs/OPEN_SOURCE_REVIEW.zh-CN.md)
+- 设置页支持英文和简体中文，上游提供的模型描述与活动文案会按界面语言显示并支持回退。模型选择器的免费标记使用英文，当前截图为中文。
+- 文档中的 DSH 基线为 `0.2.0-rc.2`。更宽的 peer-dependency 范围不等于每个后续版本都已兼容；宿主或上游更新后，应重新进行真实验收。
+- [贡献与本地验证](CONTRIBUTING.md) · [问题反馈](SUPPORT.md) · [服务运行与恢复](docs/OPERATIONS.md)
 
 ## 卸载
 
