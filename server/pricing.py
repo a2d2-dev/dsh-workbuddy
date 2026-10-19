@@ -15,6 +15,14 @@ def multiplier(label: object) -> float | None:
     return value if math.isfinite(value) else None
 
 
+def timestamp(value: object) -> datetime:
+    """Parse a string timestamp, normalizing UTC Z for Python 3.10; return datetime or raise ValueError."""
+    if not isinstance(value, str):
+        raise ValueError("Promotion timestamp must be a string")
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    return datetime.fromisoformat(normalized)
+
+
 def active_promotion(promotion: dict, model_id: str, now: datetime) -> bool:
     """Require explicit model membership and a valid, currently active absolute schedule."""
     model_ids = promotion.get("modelIds")
@@ -24,8 +32,8 @@ def active_promotion(promotion: dict, model_id: str, now: datetime) -> bool:
     if not isinstance(schedule, dict) or set(schedule) - {"timezone", "validFrom", "validUntil"}:
         return False
     try:
-        start = datetime.fromisoformat(schedule["validFrom"])
-        end = datetime.fromisoformat(schedule["validUntil"])
+        start = timestamp(schedule["validFrom"])
+        end = timestamp(schedule["validUntil"])
         return start.tzinfo is not None and end.tzinfo is not None and start <= now < end
     except (KeyError, ValueError, TypeError):
         return False

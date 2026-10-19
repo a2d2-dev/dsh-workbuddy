@@ -1,5 +1,6 @@
 """Exercise the shipped Caddy configuration against a real local HTTP backend, without an account."""
 from contextlib import contextmanager
+from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -8,6 +9,7 @@ import secrets
 import shutil
 import socket
 import subprocess
+import tempfile
 import threading
 import time
 
@@ -35,7 +37,7 @@ class EchoHandler(BaseHTTPRequestHandler):
 
 
 @pytest.fixture
-def backend():
+def backend() -> Iterator[str]:
     """Yield a loopback backend address; always stop and join its HTTP server thread."""
     server = ThreadingHTTPServer(("127.0.0.1", 0), EchoHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -48,8 +50,12 @@ def backend():
         thread.join(timeout=5)
 
 
-def wait_for_gateway(process, base_url):
-    """Wait for a child listener; raise if it exits or does not become ready within five seconds."""
+def wait_for_gateway(process: subprocess.Popen[bytes], base_url: str) -> None:
+    """Wait for Caddy readiness.
+
+    Args: process is the running Caddy child; base_url is its loopback HTTP origin.
+    Returns: None once a response arrives; raises RuntimeError on exit or a five-second timeout.
+    """
     deadline = time.monotonic() + 5
     with httpx.Client(trust_env=False, timeout=0.25) as client:
         while time.monotonic() < deadline:
@@ -63,9 +69,23 @@ def wait_for_gateway(process, base_url):
     raise RuntimeError("Caddy did not start within five seconds")
 
 
+def stop_gateway(process: subprocess.Popen[bytes]) -> None:
+    """Terminate the supplied Caddy child, escalating to kill after five seconds; return None."""
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
 @contextmanager
-def gateway(backend_address, key):
-    """Yield a real Caddy URL for the backend/key; terminate the child on every exit path."""
+def gateway(backend_address: str, key: str | None) -> Iterator[str]:
+    """Run a real gateway with bounded startup and cleanup.
+
+    Args: backend_address is the loopback echo listener; key sets its test secret, or None omits it.
+    Yields: the loopback gateway origin. Startup errors include diagnostics with the test key redacted.
+    """
     executable = shutil.which("caddy")
     if not executable:
         pytest.skip("Install Caddy to run gateway integration tests")
@@ -79,18 +99,20 @@ def gateway(backend_address, key):
     if key is not None:
         environment["WORKBUDDY_GATEWAY_KEY"] = key
     config = Path(__file__).resolve().parents[1] / "deploy" / "Caddyfile"
-    process = subprocess.Popen([executable, "run", "--config", str(config), "--adapter", "caddyfile"],
-                               env=environment, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    try:
-        wait_for_gateway(process, base_url)
-        yield base_url
-    finally:
-        process.terminate()
+    with tempfile.TemporaryFile(mode="w+") as diagnostics:
+        process = subprocess.Popen([executable, "run", "--config", str(config), "--adapter", "caddyfile"],
+                                   env=environment, stdout=diagnostics, stderr=diagnostics)
         try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
+            wait_for_gateway(process, base_url)
+            yield base_url
+        except RuntimeError as error:
+            diagnostics.seek(0)
+            details = diagnostics.read()
+            if key:
+                details = details.replace(key, "[redacted]")
+            raise RuntimeError(f"{error}\nCaddy diagnostics:\n{details[-4000:]}") from error
+        finally:
+            stop_gateway(process)
 
 
 def test_gateway_authenticates_and_strips_credentials_for_every_route(backend):
