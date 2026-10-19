@@ -6,6 +6,23 @@ Independent WorkBuddy account plugin for DeepSeek Harness. Adds Settings → Wor
 
 The host plugin delegates model requests to DSH's existing `PiAiAdapter`. The separately supervised Python service imports the maintained [workbuddy2api](https://github.com/Zhengyuuuui/workbuddy2api) implementation for streaming and tool-call protocol conversion. Tokens stay on the service host; the browser receives only an authorization link and account status. No WorkBuddy desktop process is required after browser authorization.
 
+## Project Status
+
+Early-stage, self-hosted integration for existing DSH users. Each Python service owns one WorkBuddy account; authenticated users of the same DSH instance share that account and its credits. Use separate deployments for separate trust boundaries. This project does not provide a hosted service or tenant isolation.
+
+The settings interface has English and Chinese dictionaries, but model descriptions, promotion text, and the model selector's free label still have Chinese-only behavior. Current screenshots show Chinese. A full English walkthrough remains a release task.
+
+Model availability and credits follow your upstream account. The provider's numeric cost metadata is currently zero for all models; this is not a statement that all models are free. Use the explicit free labels and live credit information in Settings. This is an independent community integration, with no affiliation or endorsement claimed from WorkBuddy or DeepSeek.
+
+Start with a source checkout and the [deployment guide](deploy/README.md). A package archive has been tested locally, but its contents still need cleanup before registry distribution. See the [launch readiness checklist](docs/LAUNCH_READINESS.md) for the remaining work.
+
+## Community and Operations
+
+- [Contributing and local verification](CONTRIBUTING.md)
+- [Security, credentials, and data handling](SECURITY.md)
+- [Support and bug reports](SUPPORT.md)
+- [Operator handover and release acceptance](docs/OPERATIONS.md)
+
 ## Screenshots
 
 Captured from the plugin's Chinese interface. Account identity, balances, and package expiry dates are redacted. Model availability, multipliers, and promotions reflect the capture date and may change.
@@ -28,7 +45,7 @@ Free labels come from explicit upstream billing data and active promotions.
 
 ## Install
 
-Build with `pnpm install && pnpm build`, then install the bundle using `dsh plugin --profile web add /absolute/path/to/dsh-workbuddy`. Configure the entry in the profile's `cordis.patch.yml`:
+Requires Node.js `^22.19.0 || >=24.0.0` and a compatible DSH installation. The local review used DSH packages `0.2.0-rc.2`; the wider peer-dependency range is not a tested compatibility matrix. Build with `pnpm install --frozen-lockfile && pnpm build`, then install the bundle using `dsh plugin --profile web add /absolute/path/to/dsh-workbuddy`. Configure the entry in the profile's `cordis.patch.yml`:
 
 ```yaml
 - id: workbuddy
