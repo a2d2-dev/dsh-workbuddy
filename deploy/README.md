@@ -60,7 +60,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
   https://workbuddy-gateway.example.com/workbuddy/status
 ```
 
-Both checks must return `401` for the supplied gateway probe to pass. Repeat rejection tests for every exposed account and inference route using its correct HTTP method, verify credential stripping in gateway configuration, and confirm the Python port cannot be reached externally. Do not continue if those boundaries are missing.
+Both checks must reject unauthenticated access. The bundled gateway probe specifically expects `401` for the missing-credential request. Repeat rejection tests for every exposed account and inference route using its correct HTTP method, verify credential stripping in gateway configuration, and confirm the Python port cannot be reached externally. Do not continue if those boundaries are missing.
 
 ### 5. Register the plugin and connect in DSH
 

@@ -78,7 +78,7 @@ Free labels come from explicit upstream billing data and active promotions.
 
 **Does this provide free DeepSeek access?** Only upstream can determine your account's eligibility, billing and permitted access. Some model IDs may have temporary promotions; check the account's current model ID, credit multiplier, expiry and usage limits. A screenshot, an October promotion elsewhere, or a zero cost estimate in DSH is not a promise that a request through this integration is free.
 
-**What does “Free only” mean?** It filters explicit zero-credit billing or currently active upstream promotion metadata. Unknown pricing stays unknown. This filter does not verify your remaining promotional allowance or override daily limits, rate limits or upstream terms. Check your WorkBuddy account for authoritative billing and entitlements; unavailable credit data does not mean a zero balance.
+**What does “Free only” mean?** It filters explicit zero-credit billing or an active upstream promotion that explicitly reduces that model's credit cost to zero. Unknown pricing stays unknown. This filter does not verify your remaining promotional allowance or override daily limits, rate limits or upstream terms. Check your WorkBuddy account for authoritative billing and entitlements; unavailable credit data does not mean a zero balance.
 
 ## Install
 
