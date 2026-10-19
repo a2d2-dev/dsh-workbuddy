@@ -2,26 +2,57 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-Independent WorkBuddy account plugin for DeepSeek Harness. Adds Settings → WorkBuddy for browser sign-in, account status, credit balances and package expiry, and a searchable model catalog with free-model filtering, credit multipliers, promotions, and capabilities. The model selector exposes the account's chat models under the WorkBuddy provider, distinguishes duplicate names by ID, and labels explicitly free models. This package is independent of the A2D2 orchestration and DimAgent plugins.
+**Connect your WorkBuddy account to DeepSeek Harness. See your credits, compare available models, and use them in your DSH conversations.**
 
-The host plugin delegates model requests to DSH's existing `PiAiAdapter`. The separately supervised Python service imports the maintained [workbuddy2api](https://github.com/Zhengyuuuui/workbuddy2api) implementation for streaming and tool-call protocol conversion. Tokens stay on the service host; the browser receives only an authorization link and account status. No WorkBuddy desktop process is required after browser authorization.
+An independent community plugin for the DSH web profile. **Self-hosted alpha**, for people who already run DSH and can operate a separate Python service and authenticated gateway. No hosted service or official WorkBuddy/DeepSeek endorsement is claimed.
 
-## Project Status
+[Start here](#quickstart) · [Deployment guide](deploy/README.md) · [Security and data handling](SECURITY.md) · [Report a problem](SUPPORT.md)
 
-Early-stage, self-hosted integration for existing DSH users. Each Python service owns one WorkBuddy account; authenticated users of the same DSH instance share that account and its credits. Use separate deployments for separate trust boundaries. This project does not provide a hosted service or tenant isolation.
+## What You Get
 
-The settings interface supports English and Simplified Chinese, including model descriptions and promotion text when supplied by upstream. Provider model names use an English free label.
+- **Account and credit visibility in DSH:** browser sign-in, connection status, remaining credits, and package expiry dates in Settings → WorkBuddy.
+- **A clearer model choice:** search by name or ID, distinguish same-name routes, compare credit multipliers and capabilities, and filter models explicitly marked free by upstream billing or active promotions. The catalog includes account models that support tool calls.
+- **Your existing DSH workflow:** select the WorkBuddy provider for streamed responses and tool-call workflows. No WorkBuddy desktop process needs to remain running after browser authorization.
 
-Model availability, credit multipliers and time-limited free promotions follow your upstream account. Check the live credit information in Settings. This is an independent community integration, with no affiliation or endorsement claimed from WorkBuddy or DeepSeek.
+This plugin is independent of the A2D2 orchestration and DimAgent plugins. The [screenshots](#screenshots) show the current interface; the [operations guide](docs/OPERATIONS.md) covers acceptance and recovery.
 
-Start with a source checkout and the [deployment guide](deploy/README.md), which includes an authenticated Caddy gateway configuration.
+## Before You Connect
 
-## Community and Operations
+- **Confirm permission for this integration.** WorkBuddy's [Acceptable Use Policy](https://www.workbuddy.ai/document/acceptable-use-policy), sections 3.5 and 4, restricts automated access and requires prior written permission for interoperating plugins and external components. Review the applicable [Service Agreement](https://www.workbuddy.ai/document/term) and confirm permission before use. A successful browser login does not establish approval for a third-party client.
+- **One service, one shared account.** Each Python service owns one WorkBuddy account. Authenticated users of the same DSH instance share its credits and account controls. There is no tenant isolation; use separate deployments for separate trust boundaries, subject to upstream account rules.
+- **Free labels are conditional.** Models, promotions, expiry and usage limits depend on your account and upstream rules. The plugin grants no extra credits or unlimited access. All provider numeric cost fields currently contain zero; those fields are not evidence of free inference. See [pricing and limits](#pricing-and-limits).
 
-- [Contributing and local verification](CONTRIBUTING.md)
-- [Security, credentials, and data handling](SECURITY.md)
-- [Support and bug reports](SUPPORT.md)
-- [Service operation and recovery](docs/OPERATIONS.md)
+## Quickstart
+
+### Prerequisites
+
+| You need | What to check |
+| --- | --- |
+| An existing DSH web installation | Local review used DSH packages `0.2.0-rc.2`; the broader peer range is not a tested compatibility matrix |
+| Node.js and pnpm | Node.js `^22.19.0 || >=24.0.0`; pnpm `10.4.1` is selected by `packageManager`; use the committed lockfile |
+| A Python service host | Python `>=3.10`, `uv`, the pinned `workbuddy2api` source, and a persistent service manager; dependencies are locked in this plugin |
+| An authenticated gateway | Authenticate every forwarded route, strip the gateway bearer key, and use HTTPS between hosts; keep Python on loopback |
+| An eligible WorkBuddy account | Confirm that the intended third-party access is permitted and that the account offers a suitable model |
+
+This is a source-based setup with multiple components. The repository includes a [Caddy gateway configuration](deploy/Caddyfile), [environment example](deploy/gateway.env.example), and [Supervisor example](deploy/workbuddy2api.conf). Adapt and verify them before connecting an account.
+
+### From Source to Your First Conversation
+
+1. **Build the plugin** with the commands in [Install](#install).
+2. **Prepare the backend** at the pinned upstream revision and configure its private credential/log paths. Follow [Service](#service) and the ordered [deployment guide](deploy/README.md#first-time-setup).
+3. **Secure and connect the gateway.** Verify that missing and incorrect credentials are rejected before installing the plugin into your DSH profile. Set `gatewayBaseURL` and `gatewayKeyFile` as shown below.
+4. **Authorize in DSH.** Open Settings → WorkBuddy, choose **Connect WorkBuddy**, then **Open sign-in page**. Complete browser authorization and return to the original settings page. Confirm **Connected**, the catalog, and your credit details; use **Refresh** to reload them.
+5. **Try a small conversation.** Select an available model under the **WorkBuddy** provider. For DeepSeek, search the catalog for `DeepSeek` and check the exact model ID, billing and promotion expiry first. Send a short prompt, then verify a read-only tool-call round trip. Inference can consume credits.
+
+Success means the settings page shows your account, the selected model streams a reply, and a tool result returns to the same conversation. A connected status alone does not verify inference. If a step fails, use the [common checks](SUPPORT.md#common-checks); do not remove gateway authentication to troubleshoot.
+
+## How It Works
+
+```text
+DSH web UI → DSH host plugin → authenticated gateway → loopback Python service → WorkBuddy
+```
+
+The host plugin reuses DSH's `PiAiAdapter`. The separately supervised Python service imports the pinned [workbuddy2api](https://github.com/Zhengyuuuui/workbuddy2api) implementation for streaming and tool-call protocol conversion. WorkBuddy tokens stay on the service host; the browser receives an authorization link and account information. Prompts, conversation history and tool data are sent upstream for inference. See [SECURITY.md](SECURITY.md) for the full data flow and retention boundaries.
 
 ## Screenshots
 
@@ -43,9 +74,30 @@ Free labels come from explicit upstream billing data and active promotions.
 
 ![Free-only filter showing three models](docs/screenshots/free-models.png)
 
+## Pricing and Limits
+
+**Does this provide free DeepSeek access?** Only upstream can determine your account's eligibility, billing and permitted access. Some model IDs may have temporary promotions; check the account's current model ID, credit multiplier, expiry and usage limits. A screenshot, an October promotion elsewhere, or a zero cost estimate in DSH is not a promise that a request through this integration is free.
+
+**What does “Free only” mean?** It filters explicit zero-credit billing or an active upstream promotion that explicitly reduces that model's credit cost to zero. Unknown pricing stays unknown. This filter does not verify your remaining promotional allowance or override daily limits, rate limits or upstream terms. Check your WorkBuddy account for authoritative billing and entitlements; unavailable credit data does not mean a zero balance.
+
 ## Install
 
-Requires Node.js `^22.19.0 || >=24.0.0`, pnpm, and DSH packages `0.2.0-rc.2`. Build with `pnpm install --frozen-lockfile && pnpm build`, then install the bundle using `dsh plugin --profile web add /absolute/path/to/dsh-workbuddy`. Configure the entry in the profile's `cordis.patch.yml`:
+Check the [prerequisites](#prerequisites) first. Clone and build the source:
+
+```sh
+git clone https://github.com/a2d2-dev/dsh-workbuddy.git
+cd dsh-workbuddy
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+After the service and authenticated gateway are ready, install the bundle into your existing DSH web profile:
+
+```sh
+dsh plugin --profile web add /absolute/path/to/dsh-workbuddy
+```
+
+Configure the entry in the profile's `cordis.patch.yml`:
 
 ```yaml
 - id: workbuddy
@@ -57,7 +109,7 @@ Requires Node.js `^22.19.0 || >=24.0.0`, pnpm, and DSH packages `0.2.0-rc.2`. Bu
     streamIdleTimeoutMs: 300000
 ```
 
-The key file contains the gateway's bearer credential, with no environment-variable assignment. Do not place upstream tokens in DSH configuration or source control. The gateway endpoint must be protected by authentication; the Python listener should remain on loopback behind that gateway.
+Replace the example domain and absolute paths with your deployment values. The key file contains the gateway's bearer credential, with no environment-variable assignment. Do not place upstream tokens in DSH configuration or source control. The gateway endpoint must be protected by authentication; the Python listener should remain on loopback behind that gateway.
 
 ## Service
 
@@ -76,6 +128,12 @@ Use Supervisor or another persistent service manager, with a single service work
 ## Verify
 
 Run `pnpm test`, `pnpm typecheck`, and `pnpm check:package` (builds and verifies the distributable). For service tests run `uv sync --frozen`, then `PYTHONPATH=/absolute/path/to/workbuddy2api/server uv run --frozen pytest`. Install Caddy to include the real gateway integration tests. CI covers Node.js 22/24 and Python 3.10/3.14. Live acceptance additionally requires DSH settings rendering, an authorized account, streamed text, and a tool-call round trip.
+
+## Compatibility and Community
+
+- Settings support English and Simplified Chinese, including model descriptions and promotion text when supplied by upstream. Provider model names use an English free label; the current screenshots show Chinese.
+- The documented DSH baseline is `0.2.0-rc.2`. A wider peer-dependency range does not establish compatibility with every later release; repeat live acceptance after host or upstream changes.
+- [Contributing and local verification](CONTRIBUTING.md) · [Support and bug reports](SUPPORT.md) · [Service operation and recovery](docs/OPERATIONS.md)
 
 ## Remove
 
